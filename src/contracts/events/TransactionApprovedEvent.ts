@@ -1,0 +1,18 @@
+// contracts/events/TransactionApprovedEvent.ts
+import { DecisionResult } from './DecisionResult';
+import { BusinessEvent, Role } from '../../domain/index';
+import { BusinessState } from '../../domain/index';
+
+export interface TransactionApprovedEvent {
+  decision: DecisionResult.APPROVED;
+
+  entity_id: string;
+
+  from_state: BusinessState;
+  to_state: BusinessState;
+
+  event: BusinessEvent;
+  actor_role: Role;
+
+  audit: string;
+}
