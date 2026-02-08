@@ -36,7 +36,7 @@ export async function executeTransaction(
   const deniedEvent = createEventEnvelope(
     {
       actorRole: payload.actorRole,
-      reason: decision.reason,
+      reasonCode: decision.reasonCode,
     },
     {
       type: 'transaction.denied',
