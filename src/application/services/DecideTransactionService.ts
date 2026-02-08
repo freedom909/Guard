@@ -21,7 +21,7 @@ export class DecideTransactionService {
       target: { entityType: 'Transaction', entityId: command.entityId },
       action: command.event,
       decision: result.result,
-      reason: result.result === 'DENIED' ? mapReason(result.reasonCode) : undefined,
+      reason: mapReason(result.result === 'DENIED' ? result.reasonCode : undefined),
       trace: {
         commandId: uuid(),
         correlationId: uuid(),

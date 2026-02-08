@@ -2,24 +2,29 @@
 import { ExecuteTransactionCommand } from '../ExecuteTransactionCommand';
 import { TransactionDecision} from '../policies/transactionDecision';
 import { TransactionDecisionReasonCode } from '../policies/TransactionDecisionReasonCode';
+import { validateRbac } from '../../../cores/RbacPolicy';
+import { getNextState } from '../../../cores/StateMachine';
 
 export function decideTransaction(command: ExecuteTransactionCommand): TransactionDecision {
-  // 这里模拟 RBAC & 状态校验逻辑
-  if (command.actorRole !== 'ADMIN') {
+  // 1. RBAC Check
+  if (!validateRbac(command.actorRole, command.event)) {
     return {
       result: 'DENIED',
       reasonCode: TransactionDecisionReasonCode.RBAC_VIOLATION,
     };
   }
 
-  if (command.fromState !== 'S02' || command.toState !== 'S03') {
+  // 2. State Machine Check
+  const nextState = getNextState(command.fromState, command.event);
+  
+  if (!nextState || nextState !== command.toState) {
     return {
       result: 'DENIED',
       reasonCode: TransactionDecisionReasonCode.INVALID_STATE_TRANSITION,
     };
   }
 
-  // 通过所有校验
+  // 3. Approved
   return {
     result: 'APPROVED',
   };
