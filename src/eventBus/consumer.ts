@@ -1,11 +1,16 @@
 import { connect, Channel } from 'amqplib';
-import { ExecuteTransaction } from '../cores/Executor';
+import { ExecuteTransaction } from '../application/executeTransaction';
+import { TransactionEventBusPublisher } from '../eventBus/TransactionEventBusPublisher';
 import { CommandEnvelope } from '../domain/commands/CommandEnvelope';
 import { ExecuteTransactionCommand } from '../domain/commands/ExecuteTransactionCommand';
 
 const RABBIT_URL = 'amqp://localhost';
 
 let channel: Channel;
+
+// ✅ Composition Root（Infra 层允许 new）
+const publisher = new TransactionEventBusPublisher();
+const executeTransactionSkill = new ExecuteTransaction(publisher);
 
 async function getChannel() {
   if (channel) return channel;
@@ -15,7 +20,11 @@ async function getChannel() {
 
   await channel.assertExchange('tx.events', 'topic', { durable: true });
   await channel.assertQueue('tx.commands', { durable: true });
-  await channel.bindQueue('tx.commands', 'tx.events', 'transaction.command');
+  await channel.bindQueue(
+    'tx.commands',
+    'tx.events',
+    'transaction.command'
+  );
 
   return channel;
 }
@@ -31,7 +40,7 @@ export async function startConsumer() {
         msg.content.toString()
       ) as CommandEnvelope<ExecuteTransactionCommand>;
 
-      await executeTransaction(command);
+      await executeTransactionSkill.execute(command); // ✅ 正确
       ch.ack(msg);
     } catch (err) {
       console.error('Failed to process message', err);

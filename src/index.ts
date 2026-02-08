@@ -17,7 +17,7 @@ async function main() {
   const service = new DecideTransactionService(auditRepo);
 
   // 3️⃣ 定义角色、事件、状态组合
-  const roles = ['AGENT', 'ADMIN', 'MANAGER'] as const;
+  const roles = ['AGENT', 'ADMIN', 'MANAGER', 'CUSTOMER'] as const;
   const events = ['CONTRACT_CONCLUDED', 'CONTRACT_CANCELLED'] as const;
   const states = [
     { from: 'S02', to: 'S03' },

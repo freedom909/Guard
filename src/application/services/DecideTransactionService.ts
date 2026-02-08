@@ -10,8 +10,10 @@ export class DecideTransactionService {
   constructor(private readonly auditLog: AuditLogRepository) {}
 
   async execute(command: ExecuteTransactionCommand): Promise<TransactionDecision> {
+    console.log('[INPUT]', command);
     // 1️⃣ 调用 Domain 决策逻辑
     const result: TransactionDecision = decideTransaction(command);
+    console.log('[DECISION]', result);
 
     // 2️⃣ 保存 AuditLog 到 MongoDB
     await this.auditLog.save({

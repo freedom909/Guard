@@ -1,101 +1,156 @@
-// __tests__/executeTransaction.test.ts
+// // __tests__/executeTransaction.test.ts
 
-jest.mock('../src/eventBus/producer', () => ({
-  sendApproved: jest.fn().mockResolvedValue(undefined),
-  sendDenied: jest.fn().mockResolvedValue(undefined),
-}));
+// jest.mock('../src/eventBus/producer', () => ({
+//   sendApproved: jest.fn().mockResolvedValue(undefined),
+//   sendDenied: jest.fn().mockResolvedValue(undefined),
+// }));
 
-import { executeTransaction } from '../src/cores/Executor';
+// import { executeTransaction } from '../src/cores/Executor';
+// import { Role, BusinessEvent } from '../src/cores/RbacPolicy';
+// import { BusinessState } from '../src/cores/StateMachine';
+// import { ExecuteTransactionCommand } from '../src/domain/commands/ExecuteTransactionCommand';
+// import { MongoClient } from 'mongodb';
+// import { v4 as uuid } from 'uuid';
+
+// // Mock uuid to prevent SyntaxError from ESM build in Jest
+// jest.mock('uuid', () => ({
+//   v4: () => 'test-uuid-val'
+// }));
+
+// const MONGO_URI = 'mongodb://localhost:27017';
+// const DB_NAME = 'audit';
+// let client: MongoClient;
+
+// beforeAll(async () => {
+//   client = new MongoClient(MONGO_URI);
+//   await client.connect();
+// });
+
+// afterAll(async () => {
+//   await client.close();
+// });
+
+// beforeEach(async () => {
+//   // 清理 audit_logs 集合，避免重复 key
+//   const db = client.db(DB_NAME);
+//   const coll = db.collection('audit_logs');
+//   await coll.deleteMany({});
+// });
+
+// describe('Transaction Execution Skill', () => {
+
+//   const createCommand = (
+//     entityId: string,
+//     fromState: BusinessState,
+//     toState: BusinessState,
+//     actorRole: Role,
+//     event: BusinessEvent = BusinessEvent.CONTRACT_CONCLUDED
+//   ): ExecuteTransactionCommand => ({
+//     entityId,
+//     fromState,
+//     toState,
+//     event,
+//     actorRole,
+//   });
+
+//   test('APPROVED: CUSTOMER can conclude contract at S02', async () => {
+//     const command = createCommand('tx-001', BusinessState.S02, BusinessState.S03, Role.CUSTOMER);
+//     const envelope = {
+//       commandId: uuid(),
+//       correlationId: uuid(),
+//       payload: command,
+//       issuedAt: new Date().toISOString(),
+//     };
+//     const result = await executeTransaction(envelope);
+
+//     expect(result).toMatchObject({
+//       result: 'APPROVED',
+//     });
+//   });
+
+//   test('DENIED: AGENT cannot conclude contract', async () => {
+//     const command = createCommand('tx-002', BusinessState.S02, BusinessState.S03, Role.AGENT);
+//     const envelope = {
+//       commandId: uuid(),
+//       correlationId: uuid(),
+//       payload: command,
+//       issuedAt: new Date().toISOString(),
+//     };
+//     const result = await executeTransaction(envelope);
+
+//     expect(result).toMatchObject({
+//       result: 'DENIED',
+//     });
+//   });
+
+//   test('DENIED: Invalid state transition', async () => {
+//     const command = createCommand('tx-003', BusinessState.S01, BusinessState.S03, Role.CUSTOMER);
+//     const envelope = {
+//       commandId: uuid(),
+//       correlationId: uuid(),
+//       payload: command,
+//       issuedAt: new Date().toISOString(),
+//     };
+//     const result = await executeTransaction(envelope);
+
+//     expect(result).toMatchObject({
+//       result: 'DENIED',
+//     });
+//   });
+
+// });
+import { ExecuteTransaction } from '../src/application/executeTransaction';
 import { Role, BusinessEvent } from '../src/cores/RbacPolicy';
 import { BusinessState } from '../src/cores/StateMachine';
-import { ExecuteTransactionCommand } from '../src/domain/commands/ExecuteTransactionCommand';
-import { MongoClient } from 'mongodb';
-import { v4 as uuid } from 'uuid';
 
-// Mock uuid to prevent SyntaxError from ESM build in Jest
-jest.mock('uuid', () => ({
-  v4: () => 'test-uuid-val'
-}));
+const mockPublisher = {
+  approved: jest.fn(),
+  denied: jest.fn(),
+};
 
-const MONGO_URI = 'mongodb://localhost:27017';
-const DB_NAME = 'audit';
-let client: MongoClient;
+describe('ExecuteTransaction Skill', () => {
+  let skill: ExecuteTransaction;
 
-beforeAll(async () => {
-  client = new MongoClient(MONGO_URI);
-  await client.connect();
-});
-
-afterAll(async () => {
-  await client.close();
-});
-
-beforeEach(async () => {
-  // 清理 audit_logs 集合，避免重复 key
-  const db = client.db(DB_NAME);
-  const coll = db.collection('audit_logs');
-  await coll.deleteMany({});
-});
-
-describe('Transaction Execution Skill', () => {
-
-  const createCommand = (
-    entityId: string,
-    fromState: BusinessState,
-    toState: BusinessState,
-    actorRole: Role,
-    event: BusinessEvent = BusinessEvent.CONTRACT_CONCLUDED
-  ): ExecuteTransactionCommand => ({
-    entityId,
-    fromState,
-    toState,
-    event,
-    actorRole,
+  beforeEach(() => {
+    jest.clearAllMocks();
+    skill = new ExecuteTransaction(mockPublisher);
   });
 
-  test('APPROVED: CUSTOMER can conclude contract at S02', async () => {
-    const command = createCommand('tx-001', BusinessState.S02, BusinessState.S03, Role.CUSTOMER);
-    const envelope = {
-      commandId: uuid(),
-      correlationId: uuid(),
-      payload: command,
+  test('APPROVED: CUSTOMER can conclude contract', async () => {
+    const result = await skill.execute({
+      commandId: 'cmd-1',
+      correlationId: 'corr-1',
       issuedAt: new Date().toISOString(),
-    };
-    const result = await executeTransaction(envelope);
-
-    expect(result).toMatchObject({
-      result: 'APPROVED',
+      payload: {
+        entityId: 'tx-001',
+        fromState: BusinessState.S02,
+        toState: BusinessState.S03,
+        actorRole: Role.CUSTOMER,
+        event: BusinessEvent.CONTRACT_CONCLUDED,
+      },
     });
+
+    expect(result.result).toBe('APPROVED');
+    expect(mockPublisher.approved).toHaveBeenCalledTimes(1);
+    expect(mockPublisher.denied).not.toHaveBeenCalled();
   });
 
   test('DENIED: AGENT cannot conclude contract', async () => {
-    const command = createCommand('tx-002', BusinessState.S02, BusinessState.S03, Role.AGENT);
-    const envelope = {
-      commandId: uuid(),
-      correlationId: uuid(),
-      payload: command,
+    const result = await skill.execute({
+      commandId: 'cmd-2',
+      correlationId: 'corr-2',
       issuedAt: new Date().toISOString(),
-    };
-    const result = await executeTransaction(envelope);
-
-    expect(result).toMatchObject({
-      result: 'DENIED',
+      payload: {
+        entityId: 'tx-002',
+        fromState: BusinessState.S02,
+        toState: BusinessState.S03,
+        actorRole: Role.AGENT,
+        event: BusinessEvent.CONTRACT_CONCLUDED,
+      },
     });
+
+    expect(result.result).toBe('DENIED');
+    expect(mockPublisher.denied).toHaveBeenCalledTimes(1);
+    expect(mockPublisher.approved).not.toHaveBeenCalled();
   });
-
-  test('DENIED: Invalid state transition', async () => {
-    const command = createCommand('tx-003', BusinessState.S01, BusinessState.S03, Role.CUSTOMER);
-    const envelope = {
-      commandId: uuid(),
-      correlationId: uuid(),
-      payload: command,
-      issuedAt: new Date().toISOString(),
-    };
-    const result = await executeTransaction(envelope);
-
-    expect(result).toMatchObject({
-      result: 'DENIED',
-    });
-  });
-
 });
