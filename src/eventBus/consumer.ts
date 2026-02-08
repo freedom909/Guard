@@ -1,5 +1,5 @@
 import { connect, Channel } from 'amqplib';
-import { executeTransaction } from '../cores/Executor';
+import { ExecuteTransaction } from '../cores/Executor';
 import { CommandEnvelope } from '../domain/commands/CommandEnvelope';
 import { ExecuteTransactionCommand } from '../domain/commands/ExecuteTransactionCommand';
 

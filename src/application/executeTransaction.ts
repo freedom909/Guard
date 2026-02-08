@@ -4,46 +4,55 @@ import { ExecuteTransactionCommand } from '../domain/commands/ExecuteTransaction
 import { ExecuteTxInput } from '../domain/commands/ExecuteTxInput';
 import { decideTransaction } from '../domain/commands/guard/transactionGuard';
 import { sendApproved, sendDenied } from '../eventBus/producer';
+import { TransactionEventPublisher } from '../ports/TransactionEventPublisher';
 
+export class ExecuteTransaction {
+  constructor(
+    private readonly publisher: TransactionEventPublisher
+  ) {}
 
+  async execute(
+    command: CommandEnvelope<ExecuteTransactionCommand>
+  ) {
+    const { payload, commandId, correlationId } = command;
 
-export async function executeTransaction(
-  command: CommandEnvelope<ExecuteTransactionCommand>
-) {
-  const { payload, commandId, correlationId } = command;
-  
-  const decision = decideTransaction(payload);// 
-  const approved = decision.result === 'APPROVED';
+    const decision = decideTransaction(payload);
 
-  if (approved) {
-    const event = createEventEnvelope(
-      { ...payload },
+    if (decision.result === 'APPROVED') {
+      const event = createEventEnvelope(
+        {
+          entityId: payload.entityId,
+          fromState: payload.fromState,
+          toState: payload.toState,
+          actorRole: payload.actorRole,
+          event: payload.event,
+        },
+        {
+          type: 'transaction.approved',
+          source: 'skill.executeTransaction',
+          correlationId,
+          causationId: commandId,
+        }
+      );
+
+      await this.publisher.approved(event);
+      return { result: 'APPROVED' };
+    }
+
+    const deniedEvent = createEventEnvelope(
       {
-        type: 'transaction.approved',
+        actorRole: payload.actorRole,
+        reasonCode: decision.reasonCode,
+      },
+      {
+        type: 'transaction.denied',
         source: 'skill.executeTransaction',
         correlationId,
         causationId: commandId,
       }
     );
 
-    await sendApproved(event);
-    return { result: 'APPROVED' };
+    await this.publisher.denied(deniedEvent);
+    return { result: 'DENIED' };
   }
-
-  const deniedEvent = createEventEnvelope(
-    {
-      actorRole: payload.actorRole,
-      reasonCode: decision.reasonCode,
-    },
-    {
-      type: 'transaction.denied',
-      source: 'skill.executeTransaction',
-      correlationId,
-      causationId: commandId,
-    }
-  );
-
-  await sendDenied(deniedEvent);
-  return { result: 'DENIED' };
 }
-

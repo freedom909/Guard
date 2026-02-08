@@ -1,5 +1,10 @@
 // __tests__/executeTransaction.test.ts
 
+jest.mock('../src/eventBus/producer', () => ({
+  sendApproved: jest.fn().mockResolvedValue(undefined),
+  sendDenied: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { executeTransaction } from '../src/cores/Executor';
 import { Role, BusinessEvent } from '../src/cores/RbacPolicy';
 import { BusinessState } from '../src/cores/StateMachine';

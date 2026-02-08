@@ -1,53 +1,9 @@
-//cores/Executor.ts
+import { ExecuteTransaction } from '../application/executeTransaction';
+import { TransactionEventBusPublisher } from '../eventBus/TransactionEventBusPublisher';
 
-import { createEventEnvelope } from '../contracts/events/createEventEnvelope';
-import { CommandEnvelope } from '../domain/commands/CommandEnvelope';
-import { ExecuteTransactionCommand } from '../domain/commands/ExecuteTransactionCommand';
-import { decideTransaction } from '../domain/commands/guard/transactionGuard';
-import { sendApproved, sendDenied } from '../eventBus/producer';
+const publisher = new TransactionEventBusPublisher();
+const executeTransactionSkill = new ExecuteTransaction(publisher);
 
-export async function executeTransaction(
-  command: CommandEnvelope<ExecuteTransactionCommand>
-): Promise<{ result: 'APPROVED' | 'DENIED' }> {
-
-  const { payload, commandId, correlationId } = command;
-
-  const decision = decideTransaction(payload);
-
-  if (decision.result === 'APPROVED') {
-    const event = createEventEnvelope(
-      {
-        entityId: payload.entityId,
-        fromState: payload.fromState,
-        toState: payload.toState,
-        actorRole: payload.actorRole,
-        event: payload.event,
-      },
-      {
-        type: 'transaction.approved',
-        source: 'skill.executeTransaction',
-        correlationId,
-        causationId: commandId,
-      }
-    );
-
-    await sendApproved(event);
-    return { result: 'APPROVED' };
-  }
-
-  const deniedEvent = createEventEnvelope(
-    {
-      actorRole: payload.actorRole,
-      reason: decision.reasonCode,
-    },
-    {
-      type: 'transaction.denied',
-      source: 'skill.executeTransaction',
-      correlationId,
-      causationId: commandId,
-    }
-  );
-
-  await sendDenied(deniedEvent);
-  return { result: 'DENIED' };
+export async function executeTransaction(command: any) {
+  return executeTransactionSkill.execute(command);
 }
