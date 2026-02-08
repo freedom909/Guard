@@ -3,26 +3,26 @@ import { BusinessEvent, Role } from './cores/RbacPolicy';
 import { BusinessState } from './cores/StateMachine';
 import { DecideTransactionService } from './application/services/DecideTransactionService';
 import { ConsoleAuditLogRepository } from './infra/audit/ConsoleAuditLogRepository';
+import { MongoAuditLogRepository } from './infra/audit/MongoAuditLogRepository';
+import { ExecuteTransactionCommand } from './domain/commands/ExecuteTransactionCommand';
 
-const service = new DecideTransactionService(
-  new ConsoleAuditLogRepository()
-);
 
-const decision = service.execute({
-  entityId: 'tx-456',
-  fromState: BusinessState.S02,
-  toState: BusinessState.S03,
-  event: BusinessEvent.CONTRACT_CONCLUDED,
-  actorRole: Role.AGENT,
-});
+async function main() {
+  const auditRepo = new MongoAuditLogRepository('mongodb://localhost:27017');
+  await auditRepo.connect();
 
-console.log(decision);
-const approved = decideTransaction({
-  entityId: 'tx-789',
-  fromState: BusinessState.S02,
-  toState: BusinessState.S03,
-  event: BusinessEvent.CONTRACT_CONCLUDED,
-  actorRole: Role.ADMIN, // or ADMIN
-});
+  const service = new DecideTransactionService(auditRepo);
 
-console.log(approved);
+  const command: ExecuteTransactionCommand = {
+    entityId: 'tx-456',
+    fromState: 'S02' as BusinessState,
+    toState: 'S03' as BusinessState,
+    event: 'CONTRACT_CONCLUDED' as BusinessEvent,
+    actorRole: 'AGENT' as Role,
+  };
+
+  const decision = await service.execute(command);
+  console.log('Decision:', decision);
+}
+
+main().catch(console.error);

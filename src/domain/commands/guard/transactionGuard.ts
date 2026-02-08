@@ -1,16 +1,26 @@
+// src/domain/commands/guard/transactionGuard.ts
 import { ExecuteTransactionCommand } from '../ExecuteTransactionCommand';
-import { DecisionResult } from '../decision/DecisionResult';
+import { TransactionDecision} from '../policies/transactionDecision';
+import { TransactionDecisionReasonCode } from '../policies/TransactionDecisionReasonCode';
 
-export function decideTransaction(
-   command: ExecuteTransactionCommand
-): DecisionResult {
-  if (command.actorRole !== 'CUSTOMER') {
-    return { result: 'DENIED', reason: 'RBAC_VIOLATION' };
+export function decideTransaction(command: ExecuteTransactionCommand): TransactionDecision {
+  // 这里模拟 RBAC & 状态校验逻辑
+  if (command.actorRole !== 'ADMIN') {
+    return {
+      result: 'DENIED',
+      reasonCode: TransactionDecisionReasonCode.RBAC_VIOLATION,
+    };
   }
 
   if (command.fromState !== 'S02' || command.toState !== 'S03') {
-    return { result: 'DENIED', reason: 'INVALID_STATE' };
+    return {
+      result: 'DENIED',
+      reasonCode: TransactionDecisionReasonCode.INVALID_STATE_TRANSITION,
+    };
   }
 
-  return { result: 'APPROVED' };
+  // 通过所有校验
+  return {
+    result: 'APPROVED',
+  };
 }
