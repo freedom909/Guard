@@ -44,5 +44,5 @@ jobs:
           context: .
           push: true
           tags: |
-            freedom909/guard:latest
-            freedom909/guard:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/guard:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/guard:${{ github.sha }}
