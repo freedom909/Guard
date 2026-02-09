@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  packages: write   # ← 关键权限，没有它一定失败
+  packages: write
 
 jobs:
   build:
@@ -17,13 +17,11 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # ❗ 不需要 docker/login-action
-
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/freedom909/guard:latest
+            ghcr.io/freedom909/guard:${{ github.sha }}
