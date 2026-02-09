@@ -44,5 +44,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/guard:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/guard:${{ github.sha }}
+            omae/guard:latest
+            omae/guard:${{ github.sha }}
